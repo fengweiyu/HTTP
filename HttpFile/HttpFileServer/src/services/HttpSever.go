@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -151,10 +152,16 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("上传的文件名:", fileName)
 
 			// 设置保存路径
-			savePath := filepath.Join("/work/share/upload", fileName) // 在当前目录下保存文件
+			currentTime := time.Now() // 获取当前时间
+			// 获取当前日期
+			currentDate := currentTime.Format("2006-01-02") // 格式化为 YYYY-MM-DD
+			savePath := "/work/share/upload/" + currentDate
+			os.MkdirAll(savePath, 0777) // 创建目录，权限设置为0777
+			fmt.Println("保存路径:", savePath)
+			savePathName := filepath.Join(savePath, fileName) // 在当前目录下保存文件
 
 			// 创建目标文件
-			outFile, err := os.Create(savePath)
+			outFile, err := os.Create(savePathName)
 			if err != nil {
 				http.Error(w, "创建文件失败", http.StatusInternalServerError)
 				return
@@ -169,7 +176,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// 返回成功响应
-			fmt.Fprintf(w, "文件上传成功: %s\n", savePath)
+			fmt.Fprintf(w, "%s", currentDate)
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.WriteHeader(http.StatusOK)
 		}
