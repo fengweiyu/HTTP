@@ -21,7 +21,7 @@
         <button type="submit" >上传文件</button>   
     </form> -->
     <br><br><br>
-    <a href="https://yuweifeng.top:9257/upload">下载目录</a>
+    <a id="downURL" href="https://yuweifeng.top:9257/upload">下载目录</a>
     <script>  
         document.getElementById('uploadButton').addEventListener('click', function() {  
             const fileInput = document.getElementById('fileInput');  
@@ -52,11 +52,13 @@
                 }  
             });  
 
+            const downURL = document.getElementById('downURL');  
             // 监听上传完成  
             xhr.addEventListener('load', function() {  
                 if (xhr.status === 200) {  
                     statusText.textContent = '文件上传成功！'; 
                     console.log('上传成功:', xhr.status);  
+                    downURL.href = "https://yuweifeng.top:9257/upload/"+xhr.responseText; // 修改链接目标 
                     alert('上传成功:'+xhr.status); 
                 } else {  
                     statusText.textContent = '文件上传失败！';  
