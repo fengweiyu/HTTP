@@ -5,15 +5,35 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>upload file</title>
+    <!-- v2--><style> 
+        #progressBar {  
+            width: 50%;  
+            background-color: #f3f3f3;  
+        }  
+        #progress {  
+            width: 0;  
+            height: 30px;  
+            background-color: #4caf50;  
+        }  
+    </style> 
 </head>
 <body>
     <h1>upload file</h1>
     
+    <input type="file" id="fileInput" multiple> 
+    <br><br>  
+    <button id="uploadButton">上传文件</button>  
+    <div id="progressBar">  
+        <div id="progress"></div>  
+    </div>  
+    <div id="status"></div> 
+
+    <!-- v1
     <input type="file" id="fileInput" />
     <br><br>  
     <button id="uploadButton">上传文件</button>  
     <progress id="progressBar" value="0" max="100" style="display:none;"></progress>  
-    <p id="status"></p> 
+    <p id="status"></p>-->
 
     <!--<form id="uploadForm" style="display:none;">  
         <input type="file" id="fileInput" name="file" />  
@@ -24,58 +44,57 @@
     <a id="downURL" href="https://yuweifeng.top:9257/upload">下载目录</a>
     <script>  
         document.getElementById('uploadButton').addEventListener('click', function() {  
-            const fileInput = document.getElementById('fileInput');  
-            const file = fileInput.files[0];  
+            const uploadURL = 'https://yuweifeng.top:9251/upload';
+            const downURL = document.getElementById('downURL');  
 
-            if (!file) {  
-                alert('请先选择一个文件。');  
+            const fileInput = document.getElementById('fileInput');  
+            const files  = fileInput.files;  //files[0];
+
+            if (files.length === 0) {  
+                alert('请选择要上传的文件！');  
                 return;  
             }  
 
-            const progressBar = document.getElementById('progressBar');  
+            const progressBar = document.getElementById('progress');  
             const statusText = document.getElementById('status');  
 
             const formData = new FormData();  
-            formData.append('file', file);  
+            for (const file of files) {  
+                formData.append('files[]', file);  
+            }  
 
             const xhr = new XMLHttpRequest();  
-
-            // 显示进度条  
-            progressBar.style.display = 'block';  
+            xhr.open('POST', uploadURL, true);  
 
             // 监听上传进度  
-            xhr.upload.addEventListener('progress', function(event) {  
-                if (event.lengthComputable) {  
-                    const percentComplete = (event.loaded / event.total) * 100;  
-                    progressBar.value = percentComplete;  
-                    statusText.textContent = `上传进度: ${Math.round(percentComplete)}%`;  
+            xhr.upload.addEventListener('progress', function (e) {  
+                if (e.lengthComputable) {  
+                    const percentComplete = (e.loaded / e.total) * 100;  
+                    progressBar.style.width = percentComplete + '%';  
+                    //progressBar.value = percentComplete;  
+                    statusText.innerText = `上传进度: ${Math.round(percentComplete)}%`; 
                 }  
             });  
-
-            const downURL = document.getElementById('downURL');  
-            // 监听上传完成  
-            xhr.addEventListener('load', function() {  
+            // 监听上传完成 
+            xhr.onload = function () {  //xhr.addEventListener('load', function()
                 if (xhr.status === 200) {  
-                    statusText.textContent = '文件上传成功！'; 
-                    console.log('上传成功:', xhr.status);  
-                    downURL.href = "https://yuweifeng.top:9257/upload/"+xhr.responseText; // 修改链接目标 
+                    const response = JSON.parse(xhr.responseText);  
+                    statusText.innerText = `上传成功: 100%`;  
+                    console.log('上传成功:',response); 
+                    downURL.href = "https://yuweifeng.top:9257/upload/"+response.date; // +xhr.responseText; // 修改链接目标 
                     alert('上传成功:'+xhr.status); 
                 } else {  
-                    statusText.textContent = '文件上传失败！';  
+                    statusText.innerText = '上传失败。';  
                     console.error('上传失败:', xhr.status); 
                     alert('上传失败:'+xhr.status); 
                 }  
-                //progressBar.style.display = 'none'; // 隐藏进度条  
-            });  
-
+            };  
             // 监听上传错误  
             xhr.addEventListener('error', function() {  
-                statusText.textContent = '发生错误，文件上传失败！';  
-                progressBar.style.display = 'none'; // 隐藏进度条  
-            });  
+                statusText.innerText = '发生错误，文件上传失败！';  
+                //progressBar.style.display = 'none'; // 隐藏进度条  
+            }); 
 
-            // 发送请求  
-            xhr.open('POST', 'https://yuweifeng.top:9251/upload'); // 替换为您的上传 URL  
             xhr.send(formData);  
         });  
 

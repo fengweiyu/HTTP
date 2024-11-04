@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -126,6 +127,14 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "POST":
 		{
+			// 设置保存路径
+			currentTime := time.Now() // 获取当前时间
+			// 获取当前日期
+			currentDate := currentTime.Format("2006-01-02") // 格式化为 YYYY-MM-DD
+			savePath := "/work/share/upload/" + currentDate
+			os.MkdirAll(savePath, 0777) // 创建目录，权限设置为0777
+			fmt.Println("保存路径:", savePath)
+
 			// 限制请求方法为 POST
 			if r.Method != http.MethodPost {
 				http.Error(w, "不支持此方法", http.StatusMethodNotAllowed)
@@ -140,45 +149,46 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// 获取文件
-			file, fileHeader, err := r.FormFile("file")
-			if err != nil {
-				http.Error(w, "获取文件失败", http.StatusBadRequest)
-				return
+			files := r.MultipartForm.File["files[]"]
+			var uploadedFiles []string
+			for _, fileHeader := range files {
+				// 以文件名保存文件
+				file, err := fileHeader.Open()
+				if err != nil {
+					http.Error(w, "无法打开文件", http.StatusBadRequest)
+					return
+				}
+				defer file.Close()
+
+				// 获取文件名
+				fileName := fileHeader.Filename
+				fmt.Println("currentDate:", currentDate, "上传的文件名:", fileName)
+				// 创建目标文件
+				destinationPath := filepath.Join(savePath, fileHeader.Filename)
+				outFile, err := os.Create(destinationPath)
+				if err != nil {
+					http.Error(w, "无法创建文件", http.StatusInternalServerError)
+					return
+				}
+				defer outFile.Close()
+
+				// 复制文件内容
+				if _, err = io.Copy(outFile, file); err != nil {
+					http.Error(w, "文件上传失败", http.StatusInternalServerError)
+					return
+				}
+				uploadedFiles = append(uploadedFiles, fileHeader.Filename)
 			}
-			defer file.Close()
 
-			// 获取文件名
-			fileName := fileHeader.Filename
-			fmt.Println("上传的文件名:", fileName)
-
-			// 设置保存路径
-			currentTime := time.Now() // 获取当前时间
-			// 获取当前日期
-			currentDate := currentTime.Format("2006-01-02") // 格式化为 YYYY-MM-DD
-			savePath := "/work/share/upload/" + currentDate
-			os.MkdirAll(savePath, 0777) // 创建目录，权限设置为0777
-			fmt.Println("保存路径:", savePath)
-			savePathName := filepath.Join(savePath, fileName) // 在当前目录下保存文件
-
-			// 创建目标文件
-			outFile, err := os.Create(savePathName)
-			if err != nil {
-				http.Error(w, "创建文件失败", http.StatusInternalServerError)
-				return
-			}
-			defer outFile.Close()
-
-			// 将上传的文件内容复制到目标文件
-			_, err = io.Copy(outFile, file)
-			if err != nil {
-				http.Error(w, "保存文件失败", http.StatusInternalServerError)
-				return
-			}
+			// 返回成功信息
+			response := map[string]string{"message": "文件上传成功！", "date": currentDate, "files": fmt.Sprintf("%v", uploadedFiles)}
+			w.Header().Set("Content-Type", "application/json")
+			//w.Header().Set("Access-Control-Allow-Origin", "*")//nginx里有配置设置，否则这里设置后，nginx里也设置了，会造成重复的错误
+			json.NewEncoder(w).Encode(response)
 
 			// 返回成功响应
-			fmt.Fprintf(w, "%s", currentDate)
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.WriteHeader(http.StatusOK)
+			//fmt.Fprintf(w, "%s", currentDate)
+			//w.WriteHeader(http.StatusOK)
 		}
 	case "GET":
 		{
